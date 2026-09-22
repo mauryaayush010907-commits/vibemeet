@@ -1,5 +1,5 @@
 import RemoteVideo from './RemoteVideo';
-import LocalVideoPreview from './LocalVideoPreview';
+
 import ConnectionStatus from './ConnectionStatus';
 
 export default function VideoStage({ localStream, remoteStream, remoteHasVideo, camOn, state, peerDisconnected }) {
