@@ -6,16 +6,16 @@ const BACKEND_URL =
 
 let socket = null;
 
-/**
- * Create a new Socket.IO connection
- */
+// ===============================
+// CREATE SOCKET
+// ===============================
 export function createSocket(sessionId) {
   if (!sessionId) {
-    console.error("Socket.IO: sessionId is required");
+    console.error("Socket: sessionId is required");
     return null;
   }
 
-  // Disconnect old socket before creating a new one
+  // Disconnect previous connection
   if (socket) {
     socket.disconnect();
     socket = null;
@@ -36,30 +36,30 @@ export function createSocket(sessionId) {
   });
 
   socket.on("connect", () => {
-    console.log("Socket.IO connected:", socket.id);
+    console.log("Socket connected:", socket.id);
   });
 
   socket.on("disconnect", (reason) => {
-    console.log("Socket.IO disconnected:", reason);
+    console.log("Socket disconnected:", reason);
   });
 
   socket.on("connect_error", (error) => {
-    console.error("Socket.IO connection error:", error.message);
+    console.error("Socket connection error:", error.message);
   });
 
   return socket;
 }
 
-/**
- * Get current socket
- */
+// ===============================
+// GET SOCKET
+// ===============================
 export function getSocket() {
   return socket;
 }
 
-/**
- * Disconnect socket
- */
+// ===============================
+// DISCONNECT SOCKET
+// ===============================
 export function disconnectSocket() {
   if (socket) {
     socket.disconnect();
@@ -67,81 +67,12 @@ export function disconnectSocket() {
   }
 }
 
-/**
- * Backend client wrapper
- *
- * Existing components can use:
- * backendClient.connect(...)
- * backendClient.getSocket()
- * backendClient.on(...)
- * backendClient.off(...)
- * backendClient.emit(...)
- * backendClient.disconnect()
- */
-const backendClient = {
-  connect(sessionId) {
-    return createSocket(sessionId);
-  },
-
-  getSocket() {
-    return getSocket();
-  },
-
-  on(event, callback) {
-    if (!socket) {
-      console.warn(
-        `Socket.IO: Cannot listen for "${event}" because socket is not connected.`
-      );
-      return this;
-    }
-
-    socket.on(event, callback);
-    return this;
-  },
-
-  off(event, callback) {
-    if (!socket) {
-      return this;
-    }
-
-    if (callback) {
-      socket.off(event, callback);
-    } else {
-      socket.off(event);
-    }
-
-    return this;
-  },
-
-  emit(event, data) {
-    if (!socket) {
-      console.warn(
-        `Socket.IO: Cannot emit "${event}" because socket is not connected.`
-      );
-      return this;
-    }
-
-    socket.emit(event, data);
-    return this;
-  },
-
-  disconnect() {
-    disconnectSocket();
-  },
-};
-
-/**
- * Join a room
- *
- * This keeps compatibility with existing code that does:
- *
- * const channel = joinRoom("room-name");
- * channel.on(...)
- * channel.subscribe()
- */
+// ===============================
+// JOIN ROOM
+// ===============================
 export function joinRoom(name, options = {}) {
   if (!socket) {
-    console.warn("Socket.IO: Cannot join room because socket is not connected.");
+    console.warn("Socket is not connected");
 
     return {
       name,
@@ -151,9 +82,13 @@ export function joinRoom(name, options = {}) {
         return this;
       },
 
+      off() {
+        return this;
+      },
+
       subscribe() {
         return Promise.reject(
-          new Error("Socket.IO is not connected")
+          new Error("Socket is not connected")
         );
       },
 
@@ -201,9 +136,9 @@ export function joinRoom(name, options = {}) {
   };
 }
 
-/**
- * Leave a room
- */
+// ===============================
+// LEAVE ROOM
+// ===============================
 export function leaveRoom(channel) {
   if (!socket) {
     return;
@@ -223,18 +158,16 @@ export function leaveRoom(channel) {
   });
 }
 
-/**
- * Join matchmaking queue
- */
+// ===============================
+// JOIN QUEUE
+// ===============================
 export function joinQueue({
   mode,
   filters = {},
   gender = null,
 } = {}) {
   if (!socket) {
-    console.warn(
-      "Socket.IO: Cannot join queue because socket is not connected."
-    );
+    console.warn("Socket is not connected");
     return false;
   }
 
@@ -247,9 +180,9 @@ export function joinQueue({
   return true;
 }
 
-/**
- * Leave matchmaking queue
- */
+// ===============================
+// LEAVE QUEUE
+// ===============================
 export function leaveQueue() {
   if (!socket) {
     return false;
@@ -260,9 +193,9 @@ export function leaveQueue() {
   return true;
 }
 
-/**
- * End a matching session
- */
+// ===============================
+// END SESSION
+// ===============================
 export function endSession(matchId) {
   if (!socket || !matchId) {
     return false;
@@ -274,5 +207,64 @@ export function endSession(matchId) {
 
   return true;
 }
+
+// ===============================
+// BACKEND CLIENT
+// ===============================
+const backendClient = {
+  connect(sessionId) {
+    return createSocket(sessionId);
+  },
+
+  getSocket() {
+    return getSocket();
+  },
+
+  on(event, callback) {
+    if (!socket) {
+      console.warn(
+        `Socket is not connected. Cannot listen to "${event}".`
+      );
+
+      return this;
+    }
+
+    socket.on(event, callback);
+
+    return this;
+  },
+
+  off(event, callback) {
+    if (!socket) {
+      return this;
+    }
+
+    if (callback) {
+      socket.off(event, callback);
+    } else {
+      socket.off(event);
+    }
+
+    return this;
+  },
+
+  emit(event, data) {
+    if (!socket) {
+      console.warn(
+        `Socket is not connected. Cannot emit "${event}".`
+      );
+
+      return this;
+    }
+
+    socket.emit(event, data);
+
+    return this;
+  },
+
+  disconnect() {
+    disconnectSocket();
+  },
+};
 
 export default backendClient;
