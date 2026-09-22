@@ -1,0 +1,15 @@
+{
+  "name": "vibemeet",
+  "type": "module",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VibeMeet — real-time anonymous 1-on-1 video and text chat. Monorepo (frontend + backend + Vercel serverless).",
+  "scripts": {
+    "build": "cd frontend && npm install --no-audit --no-fund && npm run build",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev"
+  },
+  "dependencies": {
+    "mongodb": "^7.6.0"
+  }
+}
