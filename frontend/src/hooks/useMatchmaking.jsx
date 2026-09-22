@@ -2,7 +2,7 @@
 // Uses a realtime room, WebRTC (peer), and media devices (camera/mic).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import backendClient from '../services/socket';
-import { joinRoom, leaveRoom } from '../services/socket';
+
 import { api } from '../services/api';
 import { useChat } from '../context/ChatContext';
 import { useWebRTC } from './useWebRTC';
@@ -37,7 +37,7 @@ export function useMatchmaking() {
   }, []);
 
   const teardownChannel = useCallback(() => {
-    if (channelRef.current) { leaveRoom(channelRef.current); channelRef.current = null; }
+    if (channelRef.current) { backendClient.leaveRoom(channelRef.current); channelRef.current = null; }
   }, []);
 
   const stopSearchPolling = useCallback(() => {
@@ -74,7 +74,7 @@ export function useMatchmaking() {
     setPhase('connecting');
     setMessages([]); setStrangerTyping(false);
 
-    const ch = joinRoom(`match:${info.match_id}`);
+    const ch =(`match:${info.match_id}`);
     channelRef.current = ch;
 
     let pc = null;

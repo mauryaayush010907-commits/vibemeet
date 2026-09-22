@@ -1,13 +1,13 @@
 // useSocket — join/leave a real-time room.
 // Same primitives as a Socket.IO room, exposed to React components.
 import { useEffect, useRef } from 'react';
-import { joinRoom, leaveRoom } from '../services/socket';
+import backendClient from '../services/socket';
 
 export function useSocket(roomName, handlers, deps = []) {
   const chRef = useRef(null);
   useEffect(() => {
     if (!roomName) return undefined;
-    const ch = joinRoom(roomName);
+    const ch = backendClient.joinRoom(roomName);
     chRef.current = ch;
     for (const [event, fn] of Object.entries(handlers || {})) {
       ch.on('broadcast', { event }, ({ payload }) => fn(payload));
