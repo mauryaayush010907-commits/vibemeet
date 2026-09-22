@@ -1,6 +1,8 @@
+//javascript
+// VibeMeet backend entrypoint.
+// Express + Socket.IO
 
 import "dotenv/config";
-
 import express from "express";
 import http from "node:http";
 import cors from "cors";
@@ -30,7 +32,7 @@ const CLIENT_ORIGIN =
 // NORMALIZE ORIGIN
 // ============================================================
 
-const normalizeOrigin = (value) => {
+function normalizeOrigin(value) {
   if (!value) {
     return "";
   }
@@ -38,65 +40,52 @@ const normalizeOrigin = (value) => {
   try {
     return new URL(value).origin;
   } catch {
-    return value
-      .trim()
-      .replace(/\/+$/, "");
+    return value.trim().replace(/\/+$/, "");
   }
-};
+}
 
 // ============================================================
-// ALLOWED CORS ORIGINS
+// ALLOWED ORIGINS
 // ============================================================
 
-// CLIENT_ORIGIN can contain multiple comma-separated URLs.
-//
-// Example:
-//
-// CLIENT_ORIGIN=https://vibemeet-delta.vercel.app,http://localhost:5173
-//
-const allowedOrigins = CLIENT_ORIGIN
+const configuredOrigins = CLIENT_ORIGIN
   .split(",")
   .map((origin) => normalizeOrigin(origin))
   .filter(Boolean);
 
-// Always allow these local development origins.
 const developmentOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
 ];
 
-// Combine and remove duplicates.
-const allAllowedOrigins = [
+const allowedOrigins = [
   ...new Set([
-    ...allowedOrigins,
+    ...configuredOrigins,
     ...developmentOrigins,
   ]),
 ];
 
-console.log(
-  "Allowed CORS origins:",
-  allAllowedOrigins
-);
+console.log("Allowed CORS origins:", allowedOrigins);
 
 // ============================================================
-// CORS CHECK
+// CORS ORIGIN CHECK
 // ============================================================
 
-const corsOrigin = (origin, callback) => {
-  // Requests without Origin are normally server-to-server,
-  // health checks, curl requests, etc.
+function checkCorsOrigin(origin, callback) {
+  // Allow requests without Origin.
   if (!origin) {
     return callback(null, true);
   }
 
   const normalizedOrigin = normalizeOrigin(origin);
 
-  if (allAllowedOrigins.includes(normalizedOrigin)) {
+  if (allowedOrigins.includes(normalizedOrigin)) {
     return callback(null, true);
   }
 
   console.error(
-    `CORS blocked origin: ${normalizedOrigin}`
+    "CORS blocked origin:",
+    normalizedOrigin
   );
 
   return callback(
@@ -104,10 +93,10 @@ const corsOrigin = (origin, callback) => {
       `CORS origin not allowed: ${normalizedOrigin}`
     )
   );
-};
+}
 
 // ============================================================
-// EXPRESS
+// EXPRESS APP
 // ============================================================
 
 const app = express();
@@ -124,7 +113,7 @@ const server = http.createServer(app);
 
 app.use(
   cors({
-    origin: corsOrigin,
+    origin: checkCorsOrigin,
     credentials: true,
 
     methods: [
@@ -212,8 +201,7 @@ app.use(errorHandler);
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: corsOrigin,
-
+    origin: checkCorsOrigin,
     credentials: true,
 
     methods: [
@@ -241,11 +229,12 @@ server.listen(
     );
 
     console.log(
-      `VibeMeet backend running on port ${PORT}`
+      `VibeMeet backend listening on port ${PORT}`
     );
 
     console.log(
-      `Allowed frontend origins: ${allAllowedOrigins.join(", ")}`
+      "Allowed frontend origins:",
+      allowedOrigins
     );
   }
 );
