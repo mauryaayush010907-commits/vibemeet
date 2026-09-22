@@ -1,0 +1,14 @@
+{
+  "name": "omingle-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch db-wake.js",
+    "start": "node db-wake.js"
+  },
+  "dependencies": {
+    "mongodb": "^7.6.0",
+    "dotenv": "^16.4.5"
+  }
+}
