@@ -1,5 +1,5 @@
-//javascript
-// VibeMeet backend entrypoint.
+
+// VibeMeet backend entrypoint
 // Express + Socket.IO
 
 import "dotenv/config";
@@ -18,61 +18,54 @@ import presenceHandler from "../../api/presence.js";
 import reportHandler from "../../api/report.js";
 import blockHandler from "../../api/block.js";
 
-// ============================================================
-// CONFIG
-// ============================================================
+
+// --------------------------------------------------
+// Configuration
+// --------------------------------------------------
 
 const PORT = process.env.PORT || 3000;
 
-const CLIENT_ORIGIN =
-  process.env.CLIENT_ORIGIN ||
-  "https://vibemeet-delta.vercel.app";
-
-// ============================================================
-// NORMALIZE ORIGIN
-// ============================================================
-
-function normalizeOrigin(value) {
-  if (!value) {
-    return "";
-  }
+const normalizeOrigin = (value) => {
+  if (!value) return "";
 
   try {
     return new URL(value).origin;
   } catch {
-    return value.trim().replace(/\/+$/, "");
+    return value.replace(/\/+$/, "");
   }
-}
+};
 
-// ============================================================
-// ALLOWED ORIGINS
-// ============================================================
 
-const configuredOrigins = CLIENT_ORIGIN
+// --------------------------------------------------
+// Allowed CORS origins
+// --------------------------------------------------
+
+const configuredOrigins = (
+  process.env.CLIENT_ORIGIN ||
+  "https://vibemeet-delta.vercel.app"
+)
   .split(",")
-  .map((origin) => normalizeOrigin(origin))
+  .map((origin) => normalizeOrigin(origin.trim()))
   .filter(Boolean);
 
-const developmentOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
 
+// Always allow local development
 const allowedOrigins = [
   ...new Set([
     ...configuredOrigins,
-    ...developmentOrigins,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
   ]),
 ];
 
-console.log("Allowed CORS origins:", allowedOrigins);
 
-// ============================================================
-// CORS ORIGIN CHECK
-// ============================================================
+// --------------------------------------------------
+// CORS checker
+// --------------------------------------------------
 
-function checkCorsOrigin(origin, callback) {
-  // Allow requests without Origin.
+const checkCorsOrigin = (origin, callback) => {
+  // Requests without an Origin header
+  // such as health checks / server-to-server requests
   if (!origin) {
     return callback(null, true);
   }
@@ -83,33 +76,31 @@ function checkCorsOrigin(origin, callback) {
     return callback(null, true);
   }
 
-  console.error(
-    "CORS blocked origin:",
-    normalizedOrigin
+  logger.error(
+    `CORS blocked origin: ${normalizedOrigin}. Allowed origins: ${allowedOrigins.join(", ")}`
   );
 
-  return callback(
-    new Error(
-      `CORS origin not allowed: ${normalizedOrigin}`
-    )
-  );
-}
+  return callback(new Error("CORS origin not allowed"));
+};
 
-// ============================================================
-// EXPRESS APP
-// ============================================================
+
+// --------------------------------------------------
+// Express application
+// --------------------------------------------------
 
 const app = express();
 
-// ============================================================
-// HTTP SERVER
-// ============================================================
+
+// --------------------------------------------------
+// HTTP server
+// --------------------------------------------------
 
 const server = http.createServer(app);
 
-// ============================================================
-// EXPRESS CORS
-// ============================================================
+
+// --------------------------------------------------
+// Express CORS
+// --------------------------------------------------
 
 app.use(
   cors({
@@ -128,13 +119,15 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "Authorization",
+      "X-Requested-With",
     ],
   })
 );
 
-// ============================================================
-// BODY PARSER
-// ============================================================
+
+// --------------------------------------------------
+// Body parser
+// --------------------------------------------------
 
 app.use(
   express.json({
@@ -142,62 +135,42 @@ app.use(
   })
 );
 
-// ============================================================
-// HEALTH CHECK
-// ============================================================
 
-app.get(
-  "/api/healthz",
-  (_req, res) => {
-    res.json({
-      ok: true,
-      ts: Date.now(),
-    });
-  }
-);
+// --------------------------------------------------
+// Health check
+// --------------------------------------------------
 
-// ============================================================
-// API ROUTES
-// ============================================================
+app.get("/api/healthz", (_req, res) => {
+  res.json({
+    ok: true,
+    ts: Date.now(),
+  });
+});
 
-app.all(
-  "/api/match",
-  matchHandler
-);
 
-app.all(
-  "/api/presence",
-  presenceHandler
-);
+// --------------------------------------------------
+// API routes
+// --------------------------------------------------
 
-app.all(
-  "/api/report",
-  reportHandler
-);
+app.all("/api/match", matchHandler);
 
-app.all(
-  "/api/block",
-  blockHandler
-);
+app.all("/api/presence", presenceHandler);
 
-// ============================================================
-// REPORT ROUTES
-// ============================================================
+app.all("/api/report", reportHandler);
 
-app.use(
-  "/api/reports",
-  reportRoutes
-);
+app.all("/api/block", blockHandler);
 
-// ============================================================
-// ERROR HANDLER
-// ============================================================
 
-app.use(errorHandler);
+// --------------------------------------------------
+// Report routes
+// --------------------------------------------------
 
-// ============================================================
-// SOCKET.IO
-// ============================================================
+app.use("/api/reports", reportRoutes);
+
+
+// --------------------------------------------------
+// Socket.IO
+// --------------------------------------------------
 
 const io = new SocketIOServer(server, {
   cors: {
@@ -211,31 +184,31 @@ const io = new SocketIOServer(server, {
   },
 });
 
-// ============================================================
-// REGISTER SOCKET HANDLERS
-// ============================================================
+
+// --------------------------------------------------
+// Register Socket.IO handlers
+// --------------------------------------------------
 
 registerSocket(io);
 
-// ============================================================
-// START SERVER
-// ============================================================
 
-server.listen(
-  PORT,
-  () => {
-    logger.info(
-      `VibeMeet backend listening on :${PORT}`
-    );
+// --------------------------------------------------
+// Error handler
+// --------------------------------------------------
 
-    console.log(
-      `VibeMeet backend listening on port ${PORT}`
-    );
+app.use(errorHandler);
 
-    console.log(
-      "Allowed frontend origins:",
-      allowedOrigins
-    );
-  }
-);
-```
+
+// --------------------------------------------------
+// Start server
+// --------------------------------------------------
+
+server.listen(PORT, () => {
+  logger.info(
+    `VibeMeet backend listening on port ${PORT}`
+  );
+
+  logger.info(
+    `Allowed CORS origins: ${allowedOrigins.join(", ")}`
+  );
+});
