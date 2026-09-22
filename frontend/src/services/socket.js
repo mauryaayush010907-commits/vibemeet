@@ -6,7 +6,7 @@ const BACKEND_URL =
 
 let socket = null;
 
-function createSocket(sessionId) {
+export function createSocket(sessionId) {
   if (!sessionId) {
     throw new Error('sessionId is required');
   }
@@ -26,6 +26,7 @@ function createSocket(sessionId) {
   return socket;
 }
 
+// Keep this export because your existing components use it.
 const backendClient = {
   connect(sessionId) {
     return createSocket(sessionId);
@@ -33,13 +34,6 @@ const backendClient = {
 
   getSocket() {
     return socket;
-  },
-
-  disconnect() {
-    if (socket) {
-      socket.disconnect();
-      socket = null;
-    }
   },
 
   on(event, callback) {
@@ -54,49 +48,26 @@ const backendClient = {
 
   emit(event, data) {
     socket?.emit(event, data);
+    return this;
   },
 
-  channel(name) {
-    return {
-      on(event, callback) {
-        socket?.on(event, callback);
-        return this;
-      },
-
-      subscribe() {
-        return Promise.resolve('SUBSCRIBED');
-      },
-
-      send(data) {
-        socket?.emit(name, data);
-        return Promise.resolve('SENT');
-      },
-    };
-  },
-
-  removeChannel() {
-    return Promise.resolve();
+  disconnect() {
+    socket?.disconnect();
+    socket = null;
   },
 };
 
-export default backendClient;
-export { backendClient };
-
+// Keep these because your existing code imports them.
 export function joinRoom(name, opts = {}) {
-  if (!socket) {
-    console.warn('Socket is not connected');
-    return null;
-  }
-
-  // Your backend uses match:<matchId> rooms internally.
-  // Actual room joining is handled by the matchmaking server.
   return {
     name,
     opts,
+
     on(event, callback) {
-      socket.on(event, callback);
+      socket?.on(event, callback);
       return this;
     },
+
     subscribe() {
       return Promise.resolve('SUBSCRIBED');
     },
@@ -104,24 +75,9 @@ export function joinRoom(name, opts = {}) {
 }
 
 export function leaveRoom(channel) {
-  if (!channel) return;
-
-  // The backend handles leaving when the socket disconnects
-  // or when session:end is emitted.
-}
-
-export function createBackendSocket(sessionId) {
-  return createSocket(sessionId);
-}
-
-export function getSocket() {
-  return socket;
-}
-
-export function disconnectSocket() {
-  if (socket) {
-    socket.disconnect();
-    socket = null;
+  if (channel) {
+    // Socket.IO handles the actual connection.
+    // Match/session cleanup is handled by the backend.
   }
 }
 
@@ -148,3 +104,14 @@ export function endSession(matchId) {
     matchId,
   });
 }
+
+export function getSocket() {
+  return socket;
+}
+
+export function disconnectSocket() {
+  socket?.disconnect();
+  socket = null;
+}
+
+export default backendClient;
