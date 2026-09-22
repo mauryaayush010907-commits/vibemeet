@@ -2,9 +2,62 @@ import { io } from "socket.io-client";
 
 const BACKEND_URL =
   import.meta.env.VITE_API_URL ||
-  "https://vibemeet-8xxp.onrender.com";
+  "http://localhost:3000";
 
 let socket = null;
+
+export function channel(name) {
+  const channelInstance = {
+    name,
+    _handlers: [],
+
+    on(event, options, callback) {
+      if (typeof options === "function") {
+        callback = options;
+      }
+
+      const targetEvent = `${name}:${event}`;
+      const wrapped = (payload) => callback?.(payload);
+      socket?.on(targetEvent, wrapped);
+      this._handlers.push({ event: targetEvent, callback: wrapped });
+      return this;
+    },
+
+    off(event, callback) {
+      const targetEvent = `${name}:${event}`;
+      if (callback) {
+        socket?.off(targetEvent, callback);
+      } else {
+        socket?.off(targetEvent);
+      }
+      return this;
+    },
+
+    send(data) {
+      if (!socket) return false;
+      socket.emit(name, data);
+      return true;
+    },
+
+    subscribe() {
+      return Promise.resolve("SUBSCRIBED");
+    },
+
+    unsubscribe() {
+      this._handlers.forEach(({ event, callback }) => socket?.off(event, callback));
+      this._handlers = [];
+      return this;
+    },
+  };
+
+  return channelInstance;
+}
+
+export function removeChannel(ch) {
+  if (!ch || !socket) return;
+  ch._handlers.forEach(({ event, callback }) => socket.off(event, callback));
+  ch._handlers = [];
+}
 
 // ===============================
 // CREATE SOCKET
@@ -218,6 +271,15 @@ const backendClient = {
 
   getSocket() {
     return getSocket();
+  },
+
+  channel(name) {
+    return channel(name);
+  },
+
+  removeChannel(ch) {
+    removeChannel(ch);
+    return this;
   },
 
   on(event, callback) {

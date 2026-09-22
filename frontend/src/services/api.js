@@ -1,6 +1,6 @@
 const API_URL =
   import.meta.env.VITE_API_URL ||
-  'https://vibemeet-8xxp.onrender.com';
+  'http://localhost:3000';
 
 export async function api(path, body, method = 'POST') {
   const opts = {

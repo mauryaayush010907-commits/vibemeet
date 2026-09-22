@@ -14,13 +14,45 @@ import presenceHandler from '../../api/presence.js';
 import reportHandler from '../../api/report.js';
 import blockHandler from '../../api/block.js';
 
+const normalizeOrigin = (value) => {
+  if (!value) return '';
+  try {
+    return new URL(value).origin;
+  } catch {
+    return value.replace(/\/?$/, '');
+  }
+};
+
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => normalizeOrigin(origin.trim()))
+  .filter(Boolean);
+
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-  cors: { origin: process.env.CLIENT_ORIGIN || '*', credentials: true },
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const normalized = normalizeOrigin(origin);
+      return allowedOrigins.includes(normalized)
+        ? callback(null, true)
+        : callback(new Error('CORS origin not allowed'));
+    },
+    credentials: true,
+  },
 });
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*', credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    const normalized = normalizeOrigin(origin);
+    return allowedOrigins.includes(normalized)
+      ? callback(null, true)
+      : callback(new Error('CORS origin not allowed'));
+  },
+  credentials: true,
+}));
 app.use(express.json({ limit: '256kb' }));
 
 app.get('/api/healthz', (_req, res) => res.json({ ok: true, ts: Date.now() }));
